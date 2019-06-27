@@ -123,7 +123,7 @@ export default {
           if (this.type == 'editor'){
             this.instance = editorMD(this.id, this.editorConfig);
             //草稿
-            this.draft();
+            //this.draft(); 鉴于草稿功能未完善。先停掉。
             //window.addEventListener('beforeunload', e => this.beforeunloadHandler(e));
           } else {
             this.instance = editorMD.markdownToHTML(this.id, this.editorConfig);
@@ -135,13 +135,19 @@ export default {
 
     //插入数据到编辑器中。插入到光标处
     insertValue(insertContent){
-      this.instance.insertValue(insertContent);
+      this.instance.insertValue(this.html_decode(insertContent));
     },
 
     getMarkdown(){
       return this.instance.getMarkdown();
     },
+    editor_unwatch(){
+      return this.instance.unwatch();
+    },
 
+    editor_watch(){
+      return this.instance.watch();
+    },
     clear(){
       return this.instance.clear();
     },
@@ -154,17 +160,22 @@ export default {
             localStorage.page_content= that.getMarkdown() ;
         }, 60000);
 
-        //检测是否有定时保存的内容
-        var page_content = localStorage.page_content ;
-        if (page_content && page_content.length > 0) {
-          localStorage.removeItem("page_content");
-          that.$confirm(that.$t('draft_tips'),
-          ).then(()=>{
-              that.clear() ;
-              that.insertValue(page_content) ;
-              localStorage.removeItem("page_content");
-            });
-        };
+      //检测是否有定时保存的内容
+      var page_content = localStorage.page_content ;
+      if (page_content && page_content.length > 0) {
+        localStorage.removeItem("page_content");
+        that.$confirm(that.$t('draft_tips'),'',{
+          showClose:false
+        }
+        ).then(()=>{
+            that.clear() ;
+            that.insertValue(page_content) ;
+            localStorage.removeItem("page_content");
+          }).catch(()=>{
+            localStorage.removeItem("page_content");
+          });
+      };
+
     },
     //关闭前提示
     beforeunloadHandler(e){
@@ -216,7 +227,21 @@ export default {
 
         });
 
-        $("th").css("width","180px");
+        //获取内容总长度
+        var contentWidth = $("#"+this.id+" p").width() ;
+        contentWidth = contentWidth ? contentWidth : 722;
+        //表格列 的宽度
+        $("#"+this.id+" table").each(function(i){
+          var $v =$(this).get(0) ;//原生dom对象
+          var num = $v.rows.item(0).cells.length ; //表格的列数
+          var colWidth = Math.floor(contentWidth/num) -2 ;
+          if (num <= 5) {
+            $(this).find("th").css("width",colWidth.toString()+"px");
+          }
+          
+        });
+
+        
         //图片点击放大
         $("#"+this.id+" img").click(function(){
           var  img_url = $(this).attr("src");
@@ -231,7 +256,7 @@ export default {
 
         //代码块美化
         $("#"+this.id+" .linenums").css("padding-left","5px") ;
-        $("#"+this.id+" .linenums li").css("list-style-type","none") ;
+        //$("#"+this.id+" .linenums li").css("list-style-type","none") ;
         $("#"+this.id+" .linenums li").css("background-color","#fcfcfc") ;
         $("#"+this.id+" pre").css("background-color","#fcfcfc") ;
         $("#"+this.id+" pre").css("border","1px solid #e1e1e8") ;
@@ -239,6 +264,21 @@ export default {
         $("#"+this.id+" code").css("color","#d14");
         
     },
+
+
+    //转义
+    html_decode(str){   
+      var s = "";   
+      if (str.length == 0) return "";   
+      s = str.replace(/&gt;/g, "&");   
+      s = s.replace(/&lt;/g, "<");   
+      s = s.replace(/&gt;/g, ">");   
+      s = s.replace(/&nbsp;/g, " ");   
+      s = s.replace(/&#39;/g, "\'");   
+      s = s.replace(/&quot;/g, "\"");   
+      //s = s.replace(/<br>/g, "\n");   
+      return s;   
+    }
   }
 };
 </script>
